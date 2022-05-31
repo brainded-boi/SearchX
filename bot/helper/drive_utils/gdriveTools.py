@@ -14,13 +14,14 @@ from tenacity import retry, wait_exponential, stop_after_attempt, \
 from telegram import InlineKeyboardMarkup
 from telegraph.exceptions import RetryAfterError
 
+from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from bot import LOGGER, DRIVE_NAMES, DRIVE_IDS, INDEX_URLS, parent_id, \
-    IS_TEAM_DRIVE, telegraph, USE_SERVICE_ACCOUNTS, INDEX_URL
+from bot import LOGGER, DRIVE_NAMES, DRIVE_IDS, INDEX_URLS, PARENT_ID, \
+    IS_TEAM_DRIVE, TELEGRAPH, USE_SERVICE_ACCOUNTS, INDEX_URL, DEST_DRIVES
 from bot.helper.ext_utils.bot_utils import *
 from bot.helper.telegram_helper.button_builder import ButtonMaker
 
@@ -29,7 +30,7 @@ logging.getLogger('googleapiclient.discovery').setLevel(logging.ERROR)
 if USE_SERVICE_ACCOUNTS:
     SERVICE_ACCOUNT_INDEX = randrange(len(os.listdir("accounts")))
 
-telegraph_limit = 60
+TELEGRAPH_LIMIT = 60
 
 class GoogleDriveHelper:
     def __init__(self, name=None):
@@ -66,8 +67,10 @@ class GoogleDriveHelper:
         if not USE_SERVICE_ACCOUNTS:
             if os.path.exists('token.json'):
                 creds = Credentials.from_authorized_user_file('token.json', self.__OAUTH_SCOPE)
+                if creds and creds.expired and creds.refresh_token:
+                    creds.refresh(Request())
             else:
-                LOGGER.error("token.json file is missing")
+                LOGGER.error("The token.json file is missing")
         else:
             LOGGER.info(f"Authorizing with {SERVICE_ACCOUNT_INDEX}.json file")
             creds = service_account.Credentials.from_service_account_file(
@@ -81,7 +84,11 @@ class GoogleDriveHelper:
             if os.path.exists('token.json'):
                 LOGGER.info("Authorizing with token.json file")
                 creds = Credentials.from_authorized_user_file('token.json', self.__OAUTH_SCOPE)
+                if creds and creds.expired and creds.refresh_token:
+                    creds.refresh(Request())
                 return build('drive', 'v3', credentials=creds, cache_discovery=False)
+            else:
+                LOGGER.error("The token.json file is missing")
         return None
 
     @staticmethod
@@ -163,7 +170,7 @@ class GoogleDriveHelper:
             return msg
         msg = ''
         try:
-            if access != "anyone":
+            if access != '':
                 self.__set_permission_email(file_id, access)
                 msg += f"Added <code>{access}</code> as viewer"
             else:
@@ -250,16 +257,24 @@ class GoogleDriveHelper:
                 break
         return files
 
-    def clone(self, link):
+    def clone(self, link, key):
         self.start_time = time.time()
         self.total_files = 0
         self.total_folders = 0
+        parent_id = PARENT_ID
+        index_url = INDEX_URL
         try:
             file_id = self.getIdFromUrl(link)
         except (KeyError, IndexError):
             msg = "Drive ID not found"
             LOGGER.error(msg)
             return msg
+        if key in DEST_DRIVES:
+            parent_id = DEST_DRIVES[key][0]
+            try:
+                index_url = DEST_DRIVES[key][1]
+            except IndexError:
+                index_url = None
         msg = ""
         try:
             meta = self.getFileMetadata(file_id)
@@ -279,9 +294,9 @@ class GoogleDriveHelper:
                 msg += f'\n<b>SubFolders:</b> {self.total_folders}'
                 msg += f'\n<b>Files:</b> {self.total_files}'
                 msg += f'\n\n<b><a href="{self.__G_DRIVE_DIR_BASE_DOWNLOAD_URL.format(dir_id)}">Drive Link</a></b>'
-                if INDEX_URL is not None:
+                if index_url is not None:
                     url_path = requests.utils.quote(f'{meta.get("name")}', safe='')
-                    url = f'{INDEX_URL}/{url_path}/'
+                    url = f'{index_url}/{url_path}/'
                     msg += f'<b> | <a href="{url}">Index Link</a></b>'
             else:
                 file = self.copyFile(meta.get('id'), parent_id)
@@ -291,9 +306,9 @@ class GoogleDriveHelper:
                 msg += f'\n<b>Size:</b> {get_readable_file_size(int(meta.get("size", 0)))}'
                 msg += f'\n<b>Type:</b> {mime_type}'
                 msg += f'\n\n<b><a href="{self.__G_DRIVE_BASE_DOWNLOAD_URL.format(file.get("id"))}">Drive Link</a></b>'
-                if INDEX_URL is not None:
+                if index_url is not None:
                     url_path = requests.utils.quote(f'{file.get("name")}', safe='')
-                    url = f'{INDEX_URL}/{url_path}'
+                    url = f'{index_url}/{url_path}'
                     msg += f'<b> | <a href="{url}">Index Link</a></b>'
         except Exception as err:
             if isinstance(err, RetryError):
@@ -306,7 +321,7 @@ class GoogleDriveHelper:
                 token_service = self.alt_authorize()
                 if token_service is not None:
                     self.__service = token_service
-                    return self.clone(link)
+                    return self.clone(link, key)
                 msg = "File not found"
             else:
                 msg = str(err)
@@ -509,7 +524,7 @@ class GoogleDriveHelper:
         acc_no = -1
         page_per_acc = 2
         response_count = 0
-        total_acc = len(telegraph)
+        total_acc = len(TELEGRAPH)
         start_time = time.time()
         token_service = self.alt_authorize()
         if token_service is not None:
@@ -541,7 +556,7 @@ class GoogleDriveHelper:
                         msg += f"<b> | <a href='{url}'>Index Link</a></b>"
                 msg += '<br><br>'
                 response_count += 1
-                if response_count % telegraph_limit == 0:
+                if response_count % TELEGRAPH_LIMIT == 0:
                     self.telegraph_content.append(msg)
                     msg = ''
 
@@ -563,7 +578,7 @@ class GoogleDriveHelper:
                 self.telegraph_content[i] += f'<b>Page {i+1}/{total_pages}</b>'
 
             self.create_page(
-                telegraph[acc_no],
+                TELEGRAPH[acc_no],
                 self.telegraph_content[i])
 
             if i != 0:
@@ -571,7 +586,7 @@ class GoogleDriveHelper:
                 self.telegraph_content[i-1] += f'<b> | <a href="https://telegra.ph/{self.path[i]}">Next</a></b>'
 
                 self.edit_page(
-                    telegraph[(acc_no - 1) if i % page_per_acc == 0 else acc_no],
+                    TELEGRAPH[(acc_no - 1) if i % page_per_acc == 0 else acc_no],
                     self.telegraph_content[i-1],
                     self.path[i-1])
 
