@@ -53,7 +53,10 @@ Interval = []
 DRIVE_NAMES = []
 DRIVE_IDS = []
 INDEX_URLS = []
-telegraph = []
+TELEGRAPH = []
+DEST_DRIVES = {}
+
+AUTHORIZED_CHATS = set()
 
 download_dict_lock = Lock()
 status_reply_dict_lock = Lock()
@@ -63,16 +66,6 @@ download_dict = {}
 # Key: update.effective_chat.id
 # Value: telegram.Message
 status_reply_dict = {}
-
-AUTHORIZED_CHATS = set()
-
-try:
-    users = get_config('AUTHORIZED_CHATS')
-    users = users.split(" ")
-    for user in users:
-        AUTHORIZED_CHATS.add(int(user))
-except:
-    pass
 
 try:
     BOT_TOKEN = get_config('BOT_TOKEN')
@@ -87,10 +80,26 @@ except:
     exit(1)
 
 try:
-    parent_id = get_config('DRIVE_FOLDER_ID')
+    PARENT_ID = get_config('DRIVE_FOLDER_ID')
 except:
     LOGGER.error("DRIVE_FOLDER_ID env variable is missing")
     exit(1)
+
+try:
+    DOWNLOAD_DIR = get_config('DOWNLOAD_DIR')
+    if not DOWNLOAD_DIR.endswith("/"):
+        DOWNLOAD_DIR = DOWNLOAD_DIR + '/'
+except:
+    LOGGER.error("DOWNLOAD_DIR env variable is missing")
+    exit(1)
+
+try:
+    users = get_config('AUTHORIZED_CHATS')
+    users = users.split()
+    for user in users:
+        AUTHORIZED_CHATS.add(int(user.strip()))
+except:
+    pass
 
 try:
     DATABASE_URL = get_config('DATABASE_URL')
@@ -141,6 +150,14 @@ try:
     CLONE_LIMIT = float(CLONE_LIMIT)
 except:
     CLONE_LIMIT = None
+
+try:
+    COMPRESS_LIMIT = get_config('COMPRESS_LIMIT')
+    if len(COMPRESS_LIMIT) == 0:
+        raise KeyError
+    COMPRESS_LIMIT = float(COMPRESS_LIMIT)
+except:
+    COMPRESS_LIMIT = None
 
 try:
     TOKEN_JSON_URL = get_config('TOKEN_JSON_URL')
@@ -195,6 +212,22 @@ except:
     pass
 
 try:
+    DEST_LIST_URL = get_config('DEST_LIST_URL')
+    if len(DEST_LIST_URL) == 0:
+        raise KeyError
+    try:
+        res = requests.get(DEST_LIST_URL)
+        if res.status_code == 200:
+            with open('dest_list', 'wb+') as f:
+                f.write(res.content)
+        else:
+            LOGGER.error(f"Failed to load dest_list file [{res.status_code}]")
+    except Exception as e:
+        LOGGER.error(f"DEST_LIST_URL: {e}")
+except:
+    pass
+
+try:
     APPDRIVE_EMAIL = get_config('APPDRIVE_EMAIL')
     APPDRIVE_PASS = get_config('APPDRIVE_PASS')
     if len(APPDRIVE_EMAIL) == 0 or len(APPDRIVE_PASS) == 0:
@@ -225,12 +258,19 @@ if os.path.exists('drive_list'):
             except IndexError:
                 INDEX_URLS.append(None)
 
+if os.path.exists('dest_list'):
+    with open('dest_list', 'r+') as f:
+        lines = f.readlines()
+        for line in lines:
+            line = line.strip().split()
+            DEST_DRIVES[line[0]] = line[1:]
+
 def create_account(sname):
     try:
         telegra_ph = Telegraph()
         telegra_ph.create_account(short_name=sname)
         telegraph_token = telegra_ph.get_access_token()
-        telegraph.append(Telegraph(access_token=telegraph_token))
+        TELEGRAPH.append(Telegraph(access_token=telegraph_token))
         time.sleep(0.5)
     except RetryAfterError as e:
         LOGGER.info(f"Cooldown: {e.retry_after} seconds")
