@@ -136,9 +136,7 @@ class CompressListener:
             url = f'{INDEX_URL}/{url_path}'
             if typ == "Folder":
                 url += '/'
-                msg += f'<b> | <a href="{url}">Index Link</a></b>'
-            else:
-                msg += f'<b> | <a href="{url}">Index Link</a></b>'
+            msg += f'<b> | <a href="{url}">Index Link</a></b>'
         sendMessage(msg, self.bot, self.message)
         clean_download(self.dir)
         with download_dict_lock:
@@ -198,10 +196,7 @@ def _compress(bot, message, is_archive=False, is_extract=False, pswd=None):
     link = re.split(r"pswd:|\|", link)[0]
     link = link.strip()
     pswd_arg = mesg[0].split(' pswd: ')
-    if len(pswd_arg) > 1:
-        pswd = pswd_arg[1]
-    else:
-        pswd = None
+    pswd = pswd_arg[1] if len(pswd_arg) > 1 else None
     if reply_to is not None:
         link = reply_to.text.split(maxsplit=1)[0].strip()
     is_appdrive = is_appdrive_link(link)
@@ -224,8 +219,11 @@ def _compress(bot, message, is_archive=False, is_extract=False, pswd=None):
     if is_gdrive_link(link):
         threading.Thread(target=add_gd_download, args=(link, f'{DOWNLOAD_DIR}{listener.uid}', listener, is_appdrive, appdict, is_gdtot)).start()
     else:
-        help_msg = '<b><u>Instructions</u></b>\nSend a link along with command'
-        help_msg += '\n\n<b><u>Supported Sites</u></b>\n• Google Drive\n• AppDrive\n• GDToT'
+        help_msg = (
+            '<b><u>Instructions</u></b>\nSend a link along with command'
+            + '\n\n<b><u>Supported Sites</u></b>\n• Google Drive\n• AppDrive\n• GDToT'
+        )
+
         help_msg += '\n\n<b><u>Set Password</u></b>\nAdd "<code>pswd: xxx</code>" after the link'
         sendMessage(help_msg, bot, message)
 
