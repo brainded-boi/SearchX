@@ -1,12 +1,12 @@
-from bot.helper.ext_utils.bot_utils import get_readable_file_size, get_readable_time
+from bot.helper.ext_utils.bot_utils import TaskStatus, get_readable_file_size, get_readable_time
+
 
 class CloneStatus:
-    def __init__(self, obj, size, files, message, gid):
+    def __init__(self, obj, size, message, gid):
         self.__obj = obj
         self.__size = size
-        self.__files = files
-        self.message = message
         self.__gid = gid
+        self.message = message
 
     def processed_bytes(self):
         return self.__obj.transferred_size
@@ -17,14 +17,11 @@ class CloneStatus:
     def size(self):
         return get_readable_file_size(self.__size)
 
+    def status(self):
+        return TaskStatus.STATUS_CLONING
+
     def name(self):
         return self.__obj.name
-
-    def files(self):
-        return self.__files
-
-    def processed_files(self):
-        return self.__obj.total_files
 
     def gid(self) -> str:
         return self.__gid
@@ -32,7 +29,7 @@ class CloneStatus:
     def progress_raw(self):
         try:
             return self.__obj.transferred_size / self.__size * 100
-        except ZeroDivisionError:
+        except:
             return 0
 
     def progress(self):
@@ -40,7 +37,7 @@ class CloneStatus:
 
     def speed_raw(self):
         """
-        :return: Download speed in Bytes/Seconds
+        :return: Clone speed in Bytes/Seconds
         """
         return self.__obj.cspeed()
 
@@ -51,7 +48,7 @@ class CloneStatus:
         try:
             seconds = (self.__size - self.__obj.transferred_size) / self.speed_raw()
             return f'{get_readable_time(seconds)}'
-        except ZeroDivisionError:
+        except:
             return '-'
 
     def download(self):

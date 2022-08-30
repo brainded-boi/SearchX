@@ -3,6 +3,8 @@ class _BotCommands:
         self.StartCommand = 'start'
         self.ListCommand = 'find'
         self.CloneCommand = 'clone'
+        self.ArchiveCommand = 'archive'
+        self.ExtractCommand = 'extract'
         self.CountCommand = 'count'
         self.CancelCommand = 'cancel'
         self.StatusCommand = 'status'
@@ -16,10 +18,10 @@ class _BotCommands:
         self.EvalCommand = 'eval'
         self.ExecCommand = 'exec'
         self.ClearLocalsCommand = 'clearlocals'
-        self.ExecHelpCommand = 'exechelp'
         self.PingCommand = 'ping'
         self.StatsCommand = 'stats'
         self.LogCommand = 'log'
+        self.RestartCommand = 'restart'
         self.HelpCommand = 'help'
 
 BotCommands = _BotCommands()

@@ -68,14 +68,6 @@ download_dict = {}
 status_reply_dict = {}
 
 try:
-    users = get_config('AUTHORIZED_CHATS')
-    users = users.split(" ")
-    for user in users:
-        AUTHORIZED_CHATS.add(int(user))
-except:
-    pass
-
-try:
     BOT_TOKEN = get_config('BOT_TOKEN')
 except:
     LOGGER.error("BOT_TOKEN env variable is missing")
@@ -92,6 +84,22 @@ try:
 except:
     LOGGER.error("DRIVE_FOLDER_ID env variable is missing")
     exit(1)
+
+try:
+    DOWNLOAD_DIR = get_config('DOWNLOAD_DIR')
+    if not DOWNLOAD_DIR.endswith("/"):
+        DOWNLOAD_DIR = DOWNLOAD_DIR + '/'
+except:
+    LOGGER.error("DOWNLOAD_DIR env variable is missing")
+    exit(1)
+
+try:
+    users = get_config('AUTHORIZED_CHATS')
+    users = users.split()
+    for user in users:
+        AUTHORIZED_CHATS.add(int(user.strip()))
+except:
+    pass
 
 try:
     DATABASE_URL = get_config('DATABASE_URL')
@@ -142,6 +150,14 @@ try:
     CLONE_LIMIT = float(CLONE_LIMIT)
 except:
     CLONE_LIMIT = None
+
+try:
+    COMPRESS_LIMIT = get_config('COMPRESS_LIMIT')
+    if len(COMPRESS_LIMIT) == 0:
+        raise KeyError
+    COMPRESS_LIMIT = float(COMPRESS_LIMIT)
+except:
+    COMPRESS_LIMIT = None
 
 try:
     TOKEN_JSON_URL = get_config('TOKEN_JSON_URL')
