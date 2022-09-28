@@ -4,7 +4,7 @@
   "keywords": [
     "telegram"
   ],
-  "repository": "https://github.com/tiararosebiezetta/SearchX",
+  "repository": "https://github.com/brainded-boi/SearchX",
   "stack": "container",
   "env":{
         "CONFIG_ENV_URL":{
