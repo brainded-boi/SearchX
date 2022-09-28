@@ -6,8 +6,8 @@ from psutil import cpu_percent, cpu_count, disk_usage, virtual_memory, net_io_co
 from sys import executable
 from telegram.ext import CommandHandler
 
-from bot import bot, LOGGER, botStartTime, AUTHORIZED_CHATS, DEST_DRIVES, TELEGRAPH, Interval, dispatcher, updater
-from bot.modules import auth, cancel, clone, compress, count, delete, eval, list, permission, shell, status
+from bot import bot, LOGGER, botStartTime, TELEGRAPH, Interval, dispatcher, updater
+from bot.modules import archive, auth, cancel, clone, count, delete, eval, list, permission, shell, status
 from bot.helper.ext_utils.bot_utils import get_readable_file_size, get_readable_time
 from bot.helper.ext_utils.fs_utils import start_cleanup, clean_all, exit_clean_up
 from bot.helper.telegram_helper.bot_commands import BotCommands
@@ -23,12 +23,6 @@ def start(update, context):
             sendMessage("<b>I'm alive :)</b>", context.bot, update.message)
     else:
         sendMessage("<b>Access denied</b>", context.bot, update.message)
-
-def listkeys(update, context):
-    keys = ''
-    keys += '\n'.join(f"• <code>{key}</code>" for key in DEST_DRIVES.keys())
-    msg = f"<b><u>Available Keys</u></b>\n{keys}"
-    sendMessage(msg, context.bot, update.message)
 
 def ping(update, context):
     start_time = int(round(time.time() * 1000))
@@ -74,11 +68,11 @@ help_string_user = f'''
 <br><br>
 • <b>/{BotCommands.StartCommand}</b>: Start the bot
 <br><br>
-• <b>/{BotCommands.ListCommand}</b> &lt;query&gt;: Search data on Google Drive
+• <b>/{BotCommands.ListCommand}</b> &lt;query&gt;: Search data in Google Drive
 <br><br>
-• <b>/{BotCommands.CloneCommand}</b> &lt;url&gt; &lt;key&gt;: Copy data from Google Drive, AppDrive and GDToT (Key optional)
+• <b>/{BotCommands.CloneCommand}</b> &lt;url&gt; &lt;dest_id&gt;: Clone data from Google Drive, AppDrive and GDToT (Destination ID optional)
 <br><br>
-• <b>/{BotCommands.ArchiveCommand}</b> &lt;url&gt;: Archive data from Google Drive, AppDrive and GDToT
+• <b>/{BotCommands.CompressCommand}</b> &lt;url&gt;: Compress data from Google Drive, AppDrive and GDToT
 <br><br>
 • <b>/{BotCommands.ExtractCommand}</b> &lt;url&gt;: Extract data from Google Drive, AppDrive and GDToT
 <br><br>
@@ -86,9 +80,7 @@ help_string_user = f'''
 <br><br>
 • <b>/{BotCommands.CancelCommand}</b> &lt;gid&gt;: Cancel a task
 <br><br>
-• <b>/{BotCommands.StatusCommand}</b>: Get a status of all tasks
-<br><br>
-• <b>/{BotCommands.ListKeysCommand}</b>: Get a list of keys for the destination drives
+• <b>/{BotCommands.StatusCommand}</b>: Get status of all tasks
 <br><br>
 • <b>/{BotCommands.PingCommand}</b>: Ping the bot
 <br><br>
@@ -106,23 +98,23 @@ help_user = TELEGRAPH[0].create_page(
 help_string_admin = f'''
 <b><u>Admin Commands</u></b>
 <br><br>
-• <b>/{BotCommands.PermissionCommand}</b> &lt;drive_url&gt; &lt;email&gt;: Set data permission on Google Drive (Email optional)
+• <b>/{BotCommands.PermissionCommand}</b> &lt;drive_url&gt; &lt;email&gt;: Set data permission in Google Drive (Email optional)
 <br><br>
 • <b>/{BotCommands.DeleteCommand}</b> &lt;drive_url&gt;: Delete data from Google Drive
 <br><br>
-• <b>/{BotCommands.AuthorizeCommand}</b>: Authorize an user or a chat for using the bot
+• <b>/{BotCommands.AuthorizeCommand}</b>: Grant authorization of an user
 <br><br>
-• <b>/{BotCommands.UnauthorizeCommand}</b>: Unauthorize an user or a chat for using the bot
+• <b>/{BotCommands.UnauthorizeCommand}</b>: Revoke authorization of an user
 <br><br>
-• <b>/{BotCommands.UsersCommand}</b>: Get a list of authorized chats
+• <b>/{BotCommands.UsersCommand}</b>: Get the list of authorized users
 <br><br>
-• <b>/{BotCommands.ShellCommand}</b> &lt;cmd&gt;: Run commands in terminal
+• <b>/{BotCommands.ShellCommand}</b> &lt;cmd&gt;: Execute shell commands
 <br><br>
 • <b>/{BotCommands.EvalCommand}</b>: Evaluate Python expressions using eval() function
 <br><br>
 • <b>/{BotCommands.ExecCommand}</b>: Execute Python code using exec() function
 <br><br>
-• <b>/{BotCommands.ClearLocalsCommand}</b>: Clear locals of eval() and exec() functions
+• <b>/{BotCommands.ClearLocalsCommand}</b>: Clear the locals of eval() and exec() functions
 <br><br>
 • <b>/{BotCommands.LogCommand}</b>: Get the log file
 <br><br>
@@ -150,20 +142,17 @@ def main():
         os.remove(".restartmsg")
 
     start_handler = CommandHandler(BotCommands.StartCommand, start, run_async=True)
-    keys_handler = CommandHandler(BotCommands.ListKeysCommand, listkeys,
-                                  filters=CustomFilters.authorized_chat | CustomFilters.authorized_user, run_async=True)
     ping_handler = CommandHandler(BotCommands.PingCommand, ping,
-                                  filters=CustomFilters.authorized_chat | CustomFilters.authorized_user, run_async=True)
+                                  filters=CustomFilters.authorized_user | CustomFilters.authorized_chat, run_async=True)
     stats_handler = CommandHandler(BotCommands.StatsCommand, stats,
-                                   filters=CustomFilters.authorized_chat | CustomFilters.authorized_user, run_async=True)
+                                   filters=CustomFilters.authorized_user | CustomFilters.authorized_chat, run_async=True)
     log_handler = CommandHandler(BotCommands.LogCommand, log,
                                  filters=CustomFilters.owner_filter, run_async=True)
     restart_handler = CommandHandler(BotCommands.RestartCommand, restart,
                                      filters=CustomFilters.owner_filter, run_async=True)
     help_handler = CommandHandler(BotCommands.HelpCommand, bot_help,
-                                  filters=CustomFilters.authorized_chat | CustomFilters.authorized_user, run_async=True)
+                                  filters=CustomFilters.authorized_user | CustomFilters.authorized_chat, run_async=True)
     dispatcher.add_handler(start_handler)
-    dispatcher.add_handler(keys_handler)
     dispatcher.add_handler(ping_handler)
     dispatcher.add_handler(stats_handler)
     dispatcher.add_handler(log_handler)

@@ -1,9 +1,10 @@
-class _BotCommands:
+class __BotCommands:
+
     def __init__(self):
         self.StartCommand = 'start'
         self.ListCommand = 'find'
         self.CloneCommand = 'clone'
-        self.ArchiveCommand = 'archive'
+        self.CompressCommand = 'compress'
         self.ExtractCommand = 'extract'
         self.CountCommand = 'count'
         self.CancelCommand = 'cancel'
@@ -13,7 +14,6 @@ class _BotCommands:
         self.AuthorizeCommand = 'authorize'
         self.UnauthorizeCommand = 'unauthorize'
         self.UsersCommand = 'users'
-        self.ListKeysCommand = 'listkeys'
         self.ShellCommand = 'shell'
         self.EvalCommand = 'eval'
         self.ExecCommand = 'exec'
@@ -24,4 +24,4 @@ class _BotCommands:
         self.RestartCommand = 'restart'
         self.HelpCommand = 'help'
 
-BotCommands = _BotCommands()
+BotCommands = __BotCommands()

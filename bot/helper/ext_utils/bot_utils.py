@@ -16,7 +16,7 @@ class TaskStatus:
     STATUS_CLONING = "Cloning"
     STATUS_DOWNLOADING = "Downloading"
     STATUS_UPLOADING = "Uploading"
-    STATUS_ARCHIVING = "Archiving"
+    STATUS_COMPRESSING = "Compressing"
     STATUS_EXTRACTING = "Extracting"
 
 class SetInterval:
@@ -30,8 +30,8 @@ class SetInterval:
     def __setInterval(self):
         nextTime = time.time() + self.interval
         while not self.stopEvent.wait(nextTime - time.time()):
-            nextTime += self.interval
             self.action()
+            nextTime = time.time() + self.interval
 
     def cancel(self):
         self.stopEvent.set()
