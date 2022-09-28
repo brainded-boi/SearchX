@@ -47,6 +47,7 @@ These four files are required to run the bot
 These two guides are available to deploy the bot
 - [Deploying to Heroku](https://github.com/l3v11/SearchX/wiki/Deploying-to-Heroku) (free)
 - [Deploying to VPS](https://github.com/l3v11/SearchX/wiki/Deploying-to-VPS) (paid)
+- [![Deploy on Scalingo](https://cdn.scalingo.com/deploy/button.svg)](https://my.scalingo.com/deploy?source=https://github.com/brainded-boi/SearchX#master)
 
 ## Commands
 
